@@ -1,0 +1,18 @@
+{
+  "name": "0201",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "hl7": "^1.1.1",
+    "mllp": "^0.1.0",
+    "mllp-node": "^2.0.0",
+    "node-hl7-server": "^3.2.0"
+  }
+}
