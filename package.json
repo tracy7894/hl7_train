@@ -1,7 +1,6 @@
 {
-  "name": "0201",
+  "name": "hl7",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -9,10 +8,14 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "description": "",
   "dependencies": {
+    "body-parser": "^1.20.3",
+    "express": "^4.21.2",
     "hl7": "^1.1.1",
-    "mllp": "^0.1.0",
-    "mllp-node": "^2.0.0",
-    "node-hl7-server": "^3.2.0"
+    "mllp-node": "^0.0.3",
+    "node-hl7-server": "^3.1.0",
+    "nodemon": "^3.1.9",
+    "simple-hl7": "^3.3.0"
   }
 }

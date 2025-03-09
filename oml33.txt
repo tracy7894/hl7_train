@@ -1,0 +1,6 @@
+MSH|^~\&|Lis||MAGLUMI X3||20200311140350||OML^O33|2|P|2.5|||NE|NE||UTF-8Patient ID
+PID|1||34||Patient_Name||ID_19960101|Male||||||||||||||||||||||||||||||^Years OldSample ID
+SPM|1|1234567^^|||||||||P
+ORC|NW||||||NRequsted Test
+OBR|1|||FT3^Requsted Test
+OBR|2|||FT4^
