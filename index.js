@@ -1,3 +1,4 @@
+require("dotenv").config(); // 加載 .env 檔案
 const hl7 = require("simple-hl7");
 const moment = require("moment");
 const net = require("net");
@@ -8,6 +9,10 @@ const parsePID = require("./parsers/parsePID");
 const parseSPM = require("./parsers/parseSPM");
 const parseORC = require("./parsers/parseORC");
 const parseOBR = require("./parsers/parseOBR");
+
+// 從環境變數中獲取配置
+const PORT = process.env.PORT || 8080;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "*"; // 預設允許所有來源
 
 // 手動構建 ORL^O34 訊息
 function buildORL34Manual(orderControl, msh) {
@@ -137,7 +142,6 @@ async function processHL7Message(message) {
 }
 
 // 創建一個 TCP 伺服器，同時處理 HTTP 和 HL7 流量
-const PORT = 8080;
 const server = net.createServer((socket) => {
     console.log("新連接建立:", socket.remoteAddress, socket.remotePort);
 
@@ -147,7 +151,7 @@ const server = net.createServer((socket) => {
         buffer += data.toString();
 
         // 檢查是否為 HTTP 請求
-        if (buffer.startsWith("POST /hl7 HTTP/1.1")) {
+        if (buffer.startsWith("POST /hl7 HTTP/1.1") || buffer.startsWith("OPTIONS /hl7 HTTP/1.1")) {
             // 等待完整 HTTP 請求
             if (!buffer.includes("\r\n\r\n")) {
                 return; // 繼續等待更多數據
@@ -157,6 +161,38 @@ const server = net.createServer((socket) => {
                 // 解析 HTTP 請求
                 const [headerPart, bodyPart] = buffer.split("\r\n\r\n");
                 const headers = headerPart.split("\r\n");
+                const method = headers[0].split(" ")[0]; // 獲取 HTTP 方法（POST 或 OPTIONS）
+
+                // 提取 Origin 頭
+                const origin = headers
+                    .find((h) => h.toLowerCase().startsWith("origin:"))
+                    ?.split(":")[1]
+                    ?.trim();
+
+                // 設置 CORS 頭
+                const corsHeaders = [
+                    `Access-Control-Allow-Origin: ${CORS_ORIGIN}`, // 允許指定的來源
+                    "Access-Control-Allow-Methods: POST, OPTIONS", // 允許的 HTTP 方法
+                    "Access-Control-Allow-Headers: Content-Type",  // 允許的頭
+                    "Access-Control-Max-Age: 86400"               // 預檢請求的緩存時間（秒）
+                ];
+
+                // 處理 OPTIONS 預檢請求
+                if (method === "OPTIONS") {
+                    const httpResponse = [
+                        "HTTP/1.1 204 No Content",
+                        ...corsHeaders,
+                        "Content-Length: 0",
+                        "",
+                        ""
+                    ].join("\r\n");
+
+                    socket.write(httpResponse);
+                    socket.end();
+                    return;
+                }
+
+                // 處理 POST 請求
                 const contentLength = headers
                     .find((h) => h.toLowerCase().startsWith("content-length:"))
                     ?.split(":")[1]
@@ -171,10 +207,8 @@ const server = net.createServer((socket) => {
 
                 // 將所有換行符（\n 或 \r\n）替換為 HL7 標準的 \r
                 const cleanedMessage = rawMessage
-                    .replace(/\r\n/g, "\r")// 替換 Windows 風格換行
-                    // .replace(/\n/g, "\r")   // 替換 Unix 風格換行
-                    // .replace(/[\x0b\x1c\x0d]/g, "") // 移除 MLLP 封包
-                    // .trim();
+                    .replace(/\r\n/g, "\r") // 替換 Windows 風格換行
+                  
 
                 console.log("處理後的 HTTP HL7 訊息:", cleanedMessage);
 
@@ -184,10 +218,11 @@ const server = net.createServer((socket) => {
 
                 const response = await processHL7Message(message);
 
-                // 構建 HTTP 回應
+                // 構建 HTTP 回應，添加 CORS 頭
                 const httpResponse = [
                     "HTTP/1.1 200 OK",
-                    "Content-Type: text/plain",
+                    "Content-Type: application/hl7-v2",
+                    ...corsHeaders,
                     `Content-Length: ${Buffer.byteLength(response)}`,
                     "",
                     response
@@ -202,9 +237,18 @@ const server = net.createServer((socket) => {
                 const ackMessage = buildACKManual("AR", `錯誤: ${error.message}`, msh);
                 const response = orlMessage ? `${orlMessage}${ackMessage}` : ackMessage;
 
+                // 設置 CORS 頭
+                const corsHeaders = [
+                    `Access-Control-Allow-Origin: ${CORS_ORIGIN}`,
+                    "Access-Control-Allow-Methods: POST, OPTIONS",
+                    "Access-Control-Allow-Headers: Content-Type",
+                    "Access-Control-Max-Age: 86400"
+                ];
+
                 const httpResponse = [
                     "HTTP/1.1 400 Bad Request",
-                    "Content-Type: text/plain",
+                    "Content-Type: application/hl7-v2",
+                    ...corsHeaders,
                     `Content-Length: ${Buffer.byteLength(response)}`,
                     "",
                     response
